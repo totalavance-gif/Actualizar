@@ -3,102 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actualizador de Constancias</title>
+    <title>Actualizador de Constancias SAT</title>
     <style>
+        :root {
+            --primary-color: #691c32; /* Color institucional Guinda */
+            --secondary-color: #10312b; /* Verde obscuro */
+            --bg-color: #f8f9fa;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            font-family: 'Montserrat', sans-serif, Arial;
+            background-color: var(--bg-color);
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
         }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+
+        .card {
+            background: #ffffff;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
+            border-top: 5px solid var(--primary-color);
         }
-        h2 {
-            color: #2c3e50;
+
+        h1 {
+            color: var(--secondary-color);
+            font-size: 1.4rem;
             text-align: center;
             margin-bottom: 1.5rem;
-            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
+
         .form-group {
             margin-bottom: 1.2rem;
         }
+
         label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #666;
-            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #444;
         }
-        input[type="text"], input[type="date"], input[type="file"] {
+
+        input[type="text"], 
+        input[type="date"], 
+        input[type="file"] {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
             box-sizing: border-box;
+            transition: border-color 0.3s ease;
         }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        input[type="file"] {
+            background: #fdfdfd;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
         button {
             width: 100%;
-            background-color: #27ae60;
+            background-color: var(--primary-color);
             color: white;
-            padding: 12px;
+            padding: 14px;
             border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            border-radius: 8px;
             font-size: 1rem;
             font-weight: bold;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #219150;
-        }
-        .footer-note {
-            font-size: 0.7rem;
-            color: #999;
-            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
             margin-top: 1rem;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .info {
+            margin-top: 1.5rem;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #666;
+            text-align: center;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Actualizar Lugar y Fecha</h2>
+<div class="card">
+    <h1>Actualizar Constancia</h1>
     
-    <form action="/procesar" method="POST" enctype="multipart/form-data">
+    <form action="procesar" method="POST" enctype="multipart/form-data">
+        
         <div class="form-group">
-            <label for="lugar">Lugar de Emisión:</label>
+            <label for="lugar">LUGAR DE EMISIÓN</label>
             <input type="text" id="lugar" name="lugar" value="CUAUHTÉMOC, CDMX" required>
         </div>
 
         <div class="form-group">
-            <label for="fecha">Fecha a mostrar:</label>
+            <label for="fecha">FECHA DE EMISIÓN</label>
             <input type="date" id="fecha" name="fecha" required>
         </div>
 
         <div class="form-group">
-            <label for="archivo_pdf">Subir PDF original:</label>
+            <label for="archivo_pdf">SELECCIONAR PDF ORIGINAL</label>
             <input type="file" id="archivo_pdf" name="archivo_pdf" accept="application/pdf" required>
         </div>
 
-        <button type="submit">GENERAR PDF NUEVO</button>
+        <button type="submit">Generar PDF Actualizado</button>
     </form>
 
-    <p class="footer-note">El sistema sobrepondrá los datos en las coordenadas exactas.</p>
+    <div class="info">
+        Nota: El sistema aplicará un parche blanco sobre la fecha anterior e insertará los nuevos datos en las coordenadas exactas de la Constancia de Situación Fiscal.
+    </div>
 </div>
 
 <script>
-    // Establecer la fecha de hoy por defecto en el input
-    document.getElementById('fecha').valueAsDate = new Date();
+    // Seleccionar automáticamente la fecha de hoy
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha').value = today;
 </script>
 
 </body>
-  </html>
-  
+</html>
