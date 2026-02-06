@@ -1,81 +1,68 @@
-import fitz  # PyMuPDF
+import fitz
 import io
 import os
-from datetime import datetime
 from flask import Flask, request, send_file, render_template
 
 app = Flask(__name__, template_folder="../templates")
 
-# Configuración de coordenadas basadas en el PDF de Mariana
-PAGE_H = 792
-COORD_X = 310 + 8  # Ajuste con el Offset
-COORD_Y_BASE = 648 # Coordenada desde abajo
-
-def get_y(pt):
-    # Convertimos de ReportLab a PyMuPDF (792 - pt - offset)
-    return PAGE_H - pt - 6
+# Coordenadas exactas para Lugar y Fecha
+COORD_X = 318  # 310 + 8 de offset
+COORD_Y = 150  # 792 - 648 + 6 (Ajustado para PyMuPDF desde arriba)
 
 @app.route("/procesar", methods=["POST"])
 def procesar():
     doc = None
     try:
-        # 1. Obtener datos del formulario
+        # 1. Obtener datos
         lugar = request.form.get("lugar", "CUAUHTÉMOC, CDMX").upper()
-        fecha_input = request.form.get("fecha") # Viene como YYYY-MM-DD
+        fecha_raw = request.form.get("fecha") # YYYY-MM-DD
         archivo = request.files.get("archivo_pdf")
 
-        if not archivo:
-            return "No subiste ningún archivo PDF", 400
+        if not archivo or not fecha_raw:
+            return "Datos incompletos", 400
 
-        # 2. Formatear la fecha al estilo SAT
-        # Ejemplo: 2026-02-05 -> 05 DE FEBRERO DE 2026
+        # 2. Formatear Fecha manualmente para evitar errores de locale
+        y, m, d = fecha_raw.split('-')
         meses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", 
                  "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
-        
-        dt = datetime.strptime(fecha_input, "%Y-%m-%d")
-        fecha_formateada = f"{dt.day} DE {meses[dt.month - 1]} DE {dt.year}"
-        texto_final = f"{lugar} A {fecha_formateada}"
+        fecha_texto = f"{int(d)} DE {meses[int(m)-1]} DE {y}"
+        texto_final = f"{lugar} A {fecha_texto}"
 
-        # 3. Procesar el PDF en memoria
-        pdf_stream = archivo.read()
-        doc = fitz.open(stream=pdf_stream, filetype="pdf")
+        # 3. Procesar PDF
+        pdf_bytes = archivo.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page = doc[0]
 
-        # 4. BORRADO: Dibujar rectángulo blanco sobre la fecha anterior
-        # Definimos el área a limpiar (X_inicio, Y_inicio, X_fin, Y_fin)
-        rect_limpiar = fitz.Rect(COORD_X - 5, get_y(COORD_Y_BASE) - 10, 580, get_y(COORD_Y_BASE) + 5)
-        page.draw_rect(rect_limpiar, color=(1, 1, 1), fill=(1, 1, 1))
+        # 4. PARCHE BLANCO: Cubre desde el inicio del campo hasta el final del renglón
+        # Rect(x0, y0, x1, y1)
+        rect_blanco = fitz.Rect(COORD_X - 5, COORD_Y - 12, 585, COORD_Y + 5)
+        page.draw_rect(rect_blanco, color=(1, 1, 1), fill=(1, 1, 1))
 
-        # 5. INSERCIÓN: Escribir el nuevo lugar y fecha
+        # 5. INSERTAR TEXTO
         page.insert_text(
-            (COORD_X, get_y(COORD_Y_BASE)),
+            (COORD_X, COORD_Y),
             texto_final,
             fontsize=7,
-            fontname="hebo" # Helvetica-Bold para coherencia total
+            fontname="hebo" # Helvetica-Bold
         )
 
-        # 6. Preparar descarga
-        buffer = io.BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
-        
+        output = io.BytesIO()
+        doc.save(output)
+        output.seek(0)
+
         return send_file(
-            buffer,
+            output,
             mimetype="application/pdf",
             as_attachment=True,
-            download_name=f"Constancia_Actualizada.pdf"
+            download_name="Constancia_Actualizada.pdf"
         )
 
     except Exception as e:
-        return f"Error en el servidor: {str(e)}", 500
+        return f"Error: {str(e)}", 500
     finally:
-        if doc:
-            doc.close()
+        if doc: doc.close()
 
 @app.route("/")
 def home():
     return render_template("index.html")
-
-if __name__ == "__main__":
-    app.run(debug=True)
-      
+        
