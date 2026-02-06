@@ -1,0 +1,2 @@
+Flask
+pymupdf==1.23.9
