@@ -5,45 +5,44 @@ from flask import Flask, request, send_file, render_template
 
 app = Flask(__name__, template_folder="../templates")
 
-# Coordenadas exactas para Lugar y Fecha
-COORD_X = 318  # 310 + 8 de offset
-COORD_Y = 150  # 792 - 648 + 6 (Ajustado para PyMuPDF desde arriba)
+# --- AJUSTE DE COORDENADAS ---
+# Bajamos el valor de COORD_Y para que el texto descienda a la posición correcta
+COORD_X = 318 
+COORD_Y = 163  # Antes estaba en 150, lo bajamos a 163 para alinear con el original
 
 @app.route("/procesar", methods=["POST"])
 def procesar():
     doc = None
     try:
-        # 1. Obtener datos
         lugar = request.form.get("lugar", "CUAUHTÉMOC, CDMX").upper()
-        fecha_raw = request.form.get("fecha") # YYYY-MM-DD
+        fecha_raw = request.form.get("fecha")
         archivo = request.files.get("archivo_pdf")
 
         if not archivo or not fecha_raw:
             return "Datos incompletos", 400
 
-        # 2. Formatear Fecha manualmente para evitar errores de locale
-        y, m, d = fecha_raw.split('-')
+        # [span_1](start_span)Formateo de fecha estilo SAT[span_1](end_span)
+        y_c, m_c, d_c = fecha_raw.split('-')
         meses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", 
                  "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
-        fecha_texto = f"{int(d)} DE {meses[int(m)-1]} DE {y}"
+        fecha_texto = f"{int(d_c)} DE {meses[int(m_c)-1]} DE {y_c}"
         texto_final = f"{lugar} A {fecha_texto}"
 
-        # 3. Procesar PDF
         pdf_bytes = archivo.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page = doc[0]
 
-        # 4. PARCHE BLANCO: Cubre desde el inicio del campo hasta el final del renglón
+        # 1. [span_2](start_span)PARCHE BLANCO: Ahora con la nueva coordenada para tapar bien[span_2](end_span)
         # Rect(x0, y0, x1, y1)
-        rect_blanco = fitz.Rect(COORD_X - 5, COORD_Y - 12, 585, COORD_Y + 5)
+        rect_blanco = fitz.Rect(COORD_X - 5, COORD_Y - 10, 585, COORD_Y + 2)
         page.draw_rect(rect_blanco, color=(1, 1, 1), fill=(1, 1, 1))
 
-        # 5. INSERTAR TEXTO
+        # 2. INSERTAR TEXTO NUEVO
         page.insert_text(
             (COORD_X, COORD_Y),
             texto_final,
             fontsize=7,
-            fontname="hebo" # Helvetica-Bold
+            [span_3](start_span)fontname="hebo" # Helvetica-Bold para igualar el original[span_3](end_span)
         )
 
         output = io.BytesIO()
@@ -65,4 +64,4 @@ def procesar():
 @app.route("/")
 def home():
     return render_template("index.html")
-        
+    
