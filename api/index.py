@@ -5,10 +5,9 @@ from flask import Flask, request, send_file, render_template
 
 app = Flask(__name__, template_folder="../templates")
 
-# --- AJUSTE DE COORDENADAS ---
-# Bajamos el valor de COORD_Y para que el texto descienda a la posición correcta
-COORD_X = 318 
-COORD_Y = 163  # Antes estaba en 150, lo bajamos a 163 para alinear con el original
+# Coordenadas calibradas para el renglón de fecha
+COORD_X = 326  # 318 + offset
+COORD_Y = 163  # Calibración exacta para el renglón superior
 
 @app.route("/procesar", methods=["POST"])
 def procesar():
@@ -19,31 +18,26 @@ def procesar():
         archivo = request.files.get("archivo_pdf")
 
         if not archivo or not fecha_raw:
-            return "Datos incompletos", 400
+            return "Faltan datos o archivo", 400
 
-        # [span_1](start_span)Formateo de fecha estilo SAT[span_1](end_span)
-        y_c, m_c, d_c = fecha_raw.split('-')
+        # Formateo manual de fecha
+        y, m, d = fecha_raw.split('-')
         meses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", 
                  "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
-        fecha_texto = f"{int(d_c)} DE {meses[int(m_c)-1]} DE {y_c}"
-        texto_final = f"{lugar} A {fecha_texto}"
+        texto_final = f"{lugar} A {int(d)} DE {meses[int(m)-1]} DE {y}"
 
+        # Procesamiento
         pdf_bytes = archivo.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page = doc[0]
 
-        # 1. [span_2](start_span)PARCHE BLANCO: Ahora con la nueva coordenada para tapar bien[span_2](end_span)
-        # Rect(x0, y0, x1, y1)
-        rect_blanco = fitz.Rect(COORD_X - 5, COORD_Y - 10, 585, COORD_Y + 2)
+        # PARCHE: Borrar texto anterior
+        # Ensanchamos el rectángulo para asegurar que borre "TLALMANALCO..."
+        rect_blanco = fitz.Rect(COORD_X - 10, COORD_Y - 12, 585, COORD_Y + 5)
         page.draw_rect(rect_blanco, color=(1, 1, 1), fill=(1, 1, 1))
 
-        # 2. INSERTAR TEXTO NUEVO
-        page.insert_text(
-            (COORD_X, COORD_Y),
-            texto_final,
-            fontsize=7,
-            [span_3](start_span)fontname="hebo" # Helvetica-Bold para igualar el original[span_3](end_span)
-        )
+        # ESCRIBIR
+        page.insert_text((COORD_X, COORD_Y), texto_final, fontsize=7, fontname="hebo")
 
         output = io.BytesIO()
         doc.save(output)
@@ -53,11 +47,11 @@ def procesar():
             output,
             mimetype="application/pdf",
             as_attachment=True,
-            download_name="Constancia_Actualizada.pdf"
+            download_name=f"CSF_ACTUALIZADA.pdf"
         )
 
     except Exception as e:
-        return f"Error: {str(e)}", 500
+        return f"Error interno: {str(e)}", 500
     finally:
         if doc: doc.close()
 
